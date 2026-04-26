@@ -132,14 +132,3 @@ jobs:
             imagebuilder/bin/targets/armsr/armv8/*generic-rootfs.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-      - name: 🗑️ 自动清理旧的 Release
-        uses: dev-drpradheep/delete-older-releases@v0.3.3
-        with:
-          # 只保留最近 3 个 Release，其余自动删除
-          keep_latest: 3
-          # 仅清理包含特定前缀的 Tag，防止误删其他重要发布
-          tag_names: iStoreOS-${{ env.VERSION }}
-          # 必须设为 true 才会执行删除动作
-          delete_tags: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}  
