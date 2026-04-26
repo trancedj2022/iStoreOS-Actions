@@ -1,5 +1,4 @@
 name: 💿 St1_Build-Rootfs-release
-
 on:
   workflow_dispatch:
     inputs:
@@ -36,99 +35,104 @@ env:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write  # 显式声明写入权限，确保可以创建 Release
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: ⚙️ 设置可执行权限
-        run: |
-          chmod +x arm64/build24.sh
-          chmod +x shell/*.sh
+    - name: ⚙️ 设置可执行权限
+      run: | 
+        chmod +x arm64/build24.sh
+        chmod +x shell/*.sh
 
-      - name: ⚙️ 设置IP、网关和版本号
-        run: |
-          sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/uci-defaults/99-custom.sh"
-          sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/banner"
-          CONFIG_PATH="./files/etc/uci-defaults/99-custom.sh"
+    - name: ⚙️ 设置IP、网关和版本号
+      run: |
+        sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/uci-defaults/99-custom.sh"
+        sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/banner"
+        echo "当前网络配置路径"
+        CONFIG_PATH="./files/etc/uci-defaults/99-custom.sh"
+        echo $CONFIG_PATH
+        if [ "${{ inputs.network_settings }}" = "static" ]; then
+           echo "删除网络设置-dhcp"
+           sed -i '34,111d' "$CONFIG_PATH"
+           echo "替换默认配置"
+           sed -i "/ipaddr/s/192.168.5.88/${{ inputs.ipaddr }}/g" "$CONFIG_PATH"
+           sed -i "/gateway/s/192.168.5.1/${{ inputs.gateway }}/g" "$CONFIG_PATH"
+        else
+           echo "删除网络设置-static"
+           sed -i '26,32d' "$CONFIG_PATH"
+        fi
+        echo "输出配置"
+        cat $CONFIG_PATH
+
+    - name: ⏬ 安装依赖
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses5-dev zstd curl unzip tree
+
+    - name: ⏬ 下载 ImageBuilder
+      run: |
+        curl -L -o imagebuilder.tar.zst https://github.com/Kwonelee/iStoreOS-Actions/releases/download/iStoreOS-ImageBuilder/${{ inputs.build_version }}-istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
+        tar --use-compress-program=unzstd -xvf imagebuilder.tar.zst
+        mv istoreos-imagebuilder-* imagebuilder
+
+    - name: ⏬ 复制并设置必备文件
+      run: |
+        cp arm64/{build24.sh,Makefile} imagebuilder/
+        #cp arm64/repositories.conf imagebuilder/
+        cp shell/{prepare-packages.sh,custom-packages.sh} imagebuilder/
+        find files/packages/ -name "*.ipk" -exec cp {} imagebuilder/packages/ \;
+        
+        mkdir -p imagebuilder/files/etc/{uci-defaults,banner1}
+        #添加开机启动脚本
+        cp files/etc/uci-defaults/99-custom.sh imagebuilder/files/etc/uci-defaults/
+        #替换O大打包脚本的默认banner
+        cp files/etc/banner imagebuilder/files/etc/banner1/
+        #临时解决通过晶晨宝盒写入emmc后根分区变为只读状态问题
+        cp files/etc/rc.local imagebuilder/files/etc/
+        
+        cd imagebuilder
+        echo "启用rootfs.tar.gz配置并停用非必要配置"
+        sed -i 's/# CONFIG_TARGET_ROOTFS_TARGZ is not set/CONFIG_TARGET_ROOTFS_TARGZ=y/' .config
+        sed -i "s|CONFIG_TARGET_ROOTFS_SQUASHFS=.*|# CONFIG_TARGET_ROOTFS_SQUASHFS is not set|g" .config
+        sed -i "s|CONFIG_TARGET_IMAGES_GZIP=.*|# CONFIG_TARGET_IMAGES_GZIP is not set|g" .config
+        echo "打印action目录结构"
+        tree -L 1
+
+    - name: 🧱 构建iStoreOS-rootfs
+      working-directory: ./imagebuilder
+      run: |
+        echo "打印imagebuilder目录结构"
+        tree -L 1
+        echo "打印repositories"
+        cat repositories.conf
+        echo "打印Makefile"
+        cat Makefile |grep here
+        bash ./build24.sh
+
+    - name: 📦 打印产出rootfs
+      run: |
+        echo "打印bin目录"
+        ls -lah imagebuilder/bin/targets/armsr/armv8/
+
+    - name: 🚀 上传到 Release
+      uses: softprops/action-gh-release@v2.2.1
+      with:
+        tag_name: iStoreOS-${{ env.VERSION }}-RELEASE-${{ inputs.network_settings }}
+        body: |
+          📌 版本： iStoreOS-${{ env.VERSION }}-RELEASE（imagebuilder构建，插件集成与官方一致）
           
-          if [ "${{ inputs.network_settings }}" = "static" ]; then
-            echo "配置静态网络..."
-            sed -i '34,111d' "$CONFIG_PATH"
-            sed -i "/ipaddr/s/192.168.5.88/${{ inputs.ipaddr }}/g" "$CONFIG_PATH"
-            sed -i "/gateway/s/192.168.5.1/${{ inputs.gateway }}/g" "$CONFIG_PATH"
-          else
-            echo "配置DHCP网络..."
-            sed -i '26,32d' "$CONFIG_PATH"
-          fi
-
-      - name: ⏬ 安装依赖
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libncurses5-dev zstd curl unzip tree
-
-      - name: ⏬ 下载 ImageBuilder
-        run: |
-          curl -L -o imagebuilder.tar.zst https://github.com/Kwonelee/iStoreOS-Actions/releases/download/iStoreOS-ImageBuilder/${{ inputs.build_version }}-istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
-          tar --use-compress-program=unzstd -xvf imagebuilder.tar.zst
-          mv istoreos-imagebuilder-* imagebuilder
-
-      - name: ⏬ 复制并设置必备文件
-        run: |
-          cp arm64/{build24.sh,Makefile} imagebuilder/
-          cp shell/{prepare-packages.sh,custom-packages.sh} imagebuilder/
-          find files/packages/ -name "*.ipk" -exec cp {} imagebuilder/packages/ \;
-          mkdir -p imagebuilder/files/etc/{uci-defaults,banner1}
-          cp files/etc/uci-defaults/99-custom.sh imagebuilder/files/etc/uci-defaults/
-          cp files/etc/banner imagebuilder/files/etc/banner1/
-          cp files/etc/rc.local imagebuilder/files/etc/
+          📂 来源： https://fw.koolcenter.com/iStoreOS/ib/armsr/
           
-          cd imagebuilder
-          sed -i 's/# CONFIG_TARGET_ROOTFS_TARGZ is not set/CONFIG_TARGET_ROOTFS_TARGZ=y/' .config
-          sed -i "s|CONFIG_TARGET_ROOTFS_SQUASHFS=.*|# CONFIG_TARGET_ROOTFS_SQUASHFS is not set|g" .config
-          sed -i "s|CONFIG_TARGET_IMAGES_GZIP=.*|# CONFIG_TARGET_IMAGES_GZIP is not set|g" .config
-
-      - name: 🧱 构建iStoreOS-rootfs
-        working-directory: ./imagebuilder
-        run: bash ./build24.sh
-
-      - name: 📦 检查产出文件
-        id: check_files
-        run: |
-          FILE_PATH=$(ls imagebuilder/bin/targets/armsr/armv8/*generic-rootfs.tar.gz | head -n 1)
-          if [ -f "$FILE_PATH" ]; then
-            echo "FILE_EXISTS=true" >> $GITHUB_ENV
-            echo "找到文件: $FILE_PATH"
-          else
-            echo "错误：未找到构建生成的 rootfs 文件！"
-            exit 1
-          fi
-
-      - name: 🚀 上传到 Release
-        if: env.FILE_EXISTS == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          # 核心优化：在 Tag 中加入 run_number 避免不可变发布导致的 422 错误
-          tag_name: iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}-b${{ github.run_number }}
-          name: iStoreOS-${{ env.VERSION }} (${{ inputs.network_settings }}) Build #${{ github.run_number }}
-          draft: false
-          prerelease: false
-          body: |
-            📌 **版本信息**
-            - 固件版本：`iStoreOS-${{ env.VERSION }}`
-            - 构建序列：`#${{ github.run_number }}`
-            - 网络模式：`${{ inputs.network_settings }}`
-            
-            🌐 **网络配置**
-            - 管理地址：`${{ inputs.network_settings == 'static' && inputs.ipaddr || '动态获取 / 192.168.100.1' }}`
-            - 默认网关：`${{ inputs.network_settings == 'static' && inputs.gateway || '自动' }}`
-            
-            📂 **构建说明**
-            - 基于官方 ImageBuilder (${{ inputs.build_version }}) 构建。
-            - 插件集成与官方保持一致，包含常用驱动与 LuCI 界面。
-          files: |
-            imagebuilder/bin/targets/armsr/armv8/*generic-rootfs.tar.gz
-        env:
+          🧠 内核： Please Login to iStoreOS → System → Amlogic Service → Replace the Kernel
+          
+          🧩 集成： 包含了基础系统组件、驱动、网络工具、容器支持、LuCI界面及插件等
+          
+          👤 用户名： root
+          
+          🔒 密码： 无
+          
+          🌐 IP： ${{ inputs.network_settings == 'static' && inputs.ipaddr || '单网口-动态获取（从上级路由找寻）；多网口-IP：192.168.100.1' }}
+        files: |
+          imagebuilder/bin/targets/armsr/armv8/*generic-rootfs.tar.gz
+      env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
