@@ -57,27 +57,34 @@ jobs:
 
       - name: ⏬ 下载并校验 rootfs.tar.gz
         run: |
-          echo "📦 正在获取 St1 产出物..."
           mkdir -p bin/targets/armsr/armv8
           
-          # 1. 获取包含指定前缀的最新 Tag 名
-          # 这样能自动匹配类似 iStoreOS-24.10.5-dhcp-b12 的最新版本
-          TAG=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            "https://github.com{{ github.repository }}/releases" | \
-            grep -oP "iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}-b\d+" | head -n 1)
-
-          if [ -z "$TAG" ]; then
-            echo "❌ 错误：在仓库中找不到匹配的 Release Tag！请确保 St1 已成功运行。"
+          # 1. 自动从 GitHub API 获取符合前缀的最新的 Tag (包含 -b 编号)
+          # 注意替换为你的用户名和仓库名，或者直接用环境变量
+          REPO_URL="https://github.com{{ github.repository }}/releases"
+          TAG_PREFIX="iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}"
+          
+          echo "🔍 正在搜索前缀为 $TAG_PREFIX 的最新发布..."
+          
+          # 使用 grep 提取最新的带编号 Tag
+          LATEST_TAG=$(curl -s $REPO_URL | grep -oP "${TAG_PREFIX}-b\d+" | head -n 1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            echo "❌ 找不到匹配的 Tag，请检查 St1 是否运行成功且版本号一致。"
             exit 1
           fi
-
-          echo "✅ 找到最新 Tag: $TAG"
           
-          # 2. 下载资产
-          DOWNLOAD_URL="https://github.com{{ github.repository }}/releases/download/${TAG}/istoreos-armsr-armv8-generic-rootfs.tar.gz"
-          echo "📥 下载地址: $DOWNLOAD_URL"
+          echo "✅ 找到最新 Tag: $LATEST_TAG"
           
-          curl -L -H "Authorization: token ${{ secrets.GH_TOKEN }}" -o bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz "$DOWNLOAD_URL"
+          # 2. 拼接下载地址并执行下载
+          DOWNLOAD_URL="https://github.com{{ github.repository }}/releases/download/${LATEST_TAG}/istoreos-armsr-armv8-generic-rootfs.tar.gz"
+          curl -L -o bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz "$DOWNLOAD_URL"
+          
+          # 3. 检查文件是否下载成功（非 404）
+          if [[ $(head -n 1 bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz) == *"Not Found"* ]]; then
+            echo "❌ 下载失败：文件在 Release 中不存在！"
+            exit 1
+          fi
 
           # 3. 严格校验文件合法性
           FIRST_LINE=$(head -n 1 bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz)
