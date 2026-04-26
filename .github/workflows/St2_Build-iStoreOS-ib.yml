@@ -14,7 +14,7 @@ on:
       openwrt_kernel:
         description: "2、请选择内核版本"
         required: true
-        default: "6.6.y"
+        default: "- 6.18.y"
         type: choice
         options:
           - 6.6.y
@@ -55,31 +55,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: ⏬ 下载 rootfs.tar.gz
+      - name: ⏬ 下载并校验 rootfs.tar.gz
         run: |
           echo "📦 正在获取 St1 产出物..."
           mkdir -p bin/targets/armsr/armv8
           
-          # 如果未指定 St1 编号，则通过 API 获取最新的对应 Tag
-          TAG_PREFIX="iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}"
-          if [ -z "${{ inputs.st1_run_number }}" ]; then
-            TAG=$(curl -s "https://github.com{{ github.repository }}/releases" | grep -oP "iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}-b\d+" | head -n 1)
-          else
-            TAG="iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}-${{ inputs.st1_run_number }}"
-          fi
-          
-          echo "目标 Tag: $TAG"
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/istoreos-armsr-armv8-generic-rootfs.tar.gz"
-          
-          curl -L -o bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz "$DOWNLOAD_URL"
-          if [ $? -ne 0 ]; then echo "❌ 下载失败，检查 Tag 是否存在"; exit 1; fi
+          # 1. 获取包含指定前缀的最新 Tag 名
+          # 这样能自动匹配类似 iStoreOS-24.10.5-dhcp-b12 的最新版本
+          TAG=$(curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+            "https://github.com{{ github.repository }}/releases" | \
+            grep -oP "iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}-b\d+" | head -n 1)
 
-          # 校验文件是否为 gzip 格式
-          if ! file bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz | grep -q 'gzip compressed data'; then
-            echo "❌ 错误：下载的文件不是有效的 gzip 格式！内容如下："
-            cat bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz | head -n 5
+          if [ -z "$TAG" ]; then
+            echo "❌ 错误：在仓库中找不到匹配的 Release Tag！请确保 St1 已成功运行。"
             exit 1
           fi
+
+          echo "✅ 找到最新 Tag: $TAG"
+          
+          # 2. 下载资产
+          DOWNLOAD_URL="https://github.com{{ github.repository }}/releases/download/${TAG}/istoreos-armsr-armv8-generic-rootfs.tar.gz"
+          echo "📥 下载地址: $DOWNLOAD_URL"
+          
+          curl -L -H "Authorization: token ${{ secrets.GH_TOKEN }}" -o bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz "$DOWNLOAD_URL"
+
+          # 3. 严格校验文件合法性
+          FIRST_LINE=$(head -n 1 bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz)
+          if [[ "$FIRST_LINE" == *"Not Found"* ]] || [[ "$FIRST_LINE" == *"{"* ]]; then
+            echo "❌ 错误：下载的内容是错误信息而非压缩包！"
+            cat bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz
+            exit 1
+          fi
+          echo "✅ 文件校验通过，开始构建..."
+
 
       - name: 🔍 查找文件路径
         id: find_rootfs
