@@ -36,10 +36,7 @@ on:
         default: "s905d_s905x3_s912_s922x-ct2000"
         type: choice
         options:
-          - a311d-oes_s922x-oes-plus_wxy-oect
-          - nsy-g16-plus_nsy-g68-plus_bdy-g18-pro
-          - s905d_s905x3_s912_s922x-ct2000
-          # ...（其余选项与您原列表完全一致，此处省略以节省篇幅）...
+          - s905l3b-ip103h
       openwrt_kernel:
         description: "6、内核版本"
         required: true
