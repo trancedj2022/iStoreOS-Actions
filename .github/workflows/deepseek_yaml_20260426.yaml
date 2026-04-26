@@ -2,7 +2,6 @@ name: 🚀 iStoreOS 完整构建流程
 on:
   workflow_dispatch:
     inputs:
-      # --- rootfs 构建参数 ---
       build_version:
         description: "1、ImageBuilder 版本"
         required: true
@@ -29,7 +28,6 @@ on:
         description: '4、默认网关（选择 static 时必填）'
         required: true
         default: '192.168.5.1'
-      # --- 固件打包参数 ---
       openwrt_board:
         description: "5、目标设备型号"
         required: true
@@ -56,50 +54,36 @@ env:
   VERSION: 24.10.5
 
 jobs:
-  # ========================== Job 1: 构建 rootfs ==========================
   build-rootfs:
     runs-on: ubuntu-22.04
-    outputs:
-      rootfs-tag: ${{ steps.rootfs-tag.outputs.tag }}
     steps:
       - name: Checkout 代码
         uses: actions/checkout@v3
-
       - name: ⚙️ 设置可执行权限
-        run: |
-          chmod +x arm64/build24.sh shell/*.sh
-
+        run: chmod +x arm64/build24.sh shell/*.sh
       - name: ⚙️ 替换版本号与网络配置
         run: |
           sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/uci-defaults/99-custom.sh"
           sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/banner"
           CONFIG_PATH="./files/etc/uci-defaults/99-custom.sh"
-          echo "配置文件：$CONFIG_PATH"
-          # 注意：行号删除依赖文件内容固定，若模板变更需同步修正
           if [ "${{ inputs.network_settings }}" = "static" ]; then
-            echo "删除 DHCP 段 (行 34-111)"
             sed -i '34,111d' "$CONFIG_PATH"
             sed -i "/ipaddr/s/192.168.5.88/${{ inputs.ipaddr }}/g" "$CONFIG_PATH"
             sed -i "/gateway/s/192.168.5.1/${{ inputs.gateway }}/g" "$CONFIG_PATH"
           else
-            echo "删除 static 段 (行 26-32)"
             sed -i '26,32d' "$CONFIG_PATH"
           fi
-          echo "--- 最终配置 ---"
           cat "$CONFIG_PATH"
-
       - name: ⏬ 安装构建依赖
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libncurses5-dev zstd curl unzip tree
-
       - name: ⏬ 下载 ImageBuilder
         run: |
           curl -L -o imagebuilder.tar.zst \
             https://github.com/Kwonelee/iStoreOS-Actions/releases/download/iStoreOS-ImageBuilder/${{ inputs.build_version }}-istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
           tar --use-compress-program=unzstd -xvf imagebuilder.tar.zst
           mv istoreos-imagebuilder-* imagebuilder
-
       - name: ⏬ 复制定制文件
         run: |
           cp arm64/{build24.sh,Makefile} imagebuilder/
@@ -110,30 +94,24 @@ jobs:
           cp files/etc/banner imagebuilder/files/etc/banner1/
           cp files/etc/rc.local imagebuilder/files/etc/
           cd imagebuilder
-          # 启用 rootfs.tar.gz 输出，关闭无效格式
           sed -i 's/# CONFIG_TARGET_ROOTFS_TARGZ is not set/CONFIG_TARGET_ROOTFS_TARGZ=y/' .config
           sed -i "s|CONFIG_TARGET_ROOTFS_SQUASHFS=.*|# CONFIG_TARGET_ROOTFS_SQUASHFS is not set|g" .config
           sed -i "s|CONFIG_TARGET_IMAGES_GZIP=.*|# CONFIG_TARGET_IMAGES_GZIP is not set|g" .config
           tree -L 1
-
       - name: 🧱 构建 rootfs
         working-directory: ./imagebuilder
         run: |
-          echo "=== 目录结构 ==="
           tree -L 1
           [ -f repositories.conf ] && cat repositories.conf || echo "repositories.conf 不存在"
-          echo "--- Makefile 关键字 ---"
           grep here Makefile || true
           bash ./build24.sh
-
-      - name: 📦 上传 rootfs 到 Artifact（供下一阶段使用）
+      - name: 📦 上传 rootfs 到 Artifact
         uses: actions/upload-artifact@v4
         with:
           name: rootfs-${{ inputs.network_settings }}
           path: imagebuilder/bin/targets/armsr/armv8/*generic-rootfs.tar.gz
           retention-days: 1
 
-  # ========================== Job 2: 打包固件 ============================
   build-firmware:
     needs: build-rootfs
     runs-on: ubuntu-22.04
@@ -143,18 +121,12 @@ jobs:
         with:
           name: rootfs-${{ inputs.network_settings }}
           path: bin/targets/armsr/armv8
-
       - name: 🔍 定位 rootfs 文件
         id: find_rootfs
         run: |
           ROOTFS_FILE=$(find bin/targets/armsr/armv8/ -type f -name "*rootfs.tar.gz" | head -n1)
-          if [ ! -f "$ROOTFS_FILE" ]; then
-            echo "❌ 找不到 rootfs.tar.gz"
-            exit 1
-          fi
-          echo "✅ ROOTFS: $ROOTFS_FILE"
+          [ ! -f "$ROOTFS_FILE" ] && { echo "❌ 找不到 rootfs.tar.gz"; exit 1; }
           echo "file=$ROOTFS_FILE" >> $GITHUB_OUTPUT
-
       - name: 🧱 用 Amlogic 工具打包固件
         id: package
         uses: ophub/amlogic-s9xxx-openwrt@main
@@ -166,24 +138,32 @@ jobs:
           kernel_repo: ophub/kernel
           kernel_usage: stable
           builder_name: kwonelee
-
+      # --- 关键修正：修复文件权限（避免 root 属主导致后续 mv 失败） ---
+      - name: 🔓 修复输出目录权限
+        run: |
+          sudo chown -R runner:docker "$PACKAGED_OUTPUTPATH"
+          sudo chmod -R 755 "$PACKAGED_OUTPUTPATH"
+      # --- 重命名（兼容 .img.gz / .img.xz） ---
       - name: 📜 重命名产出文件
         run: |
-          PACKAGES_DIR="${PACKAGED_OUTPUTPATH}"          # 直接使用环境变量
-          echo "打包输出目录: $PACKAGES_DIR"
-          [ -z "$PACKAGES_DIR" ] || [ ! -d "$PACKAGES_DIR" ] && { echo "❌ 目录无效"; exit 1; }
-          cd "$PACKAGES_DIR"
-          for FILE in *.img.gz; do
-            [ -f "$FILE" ] || continue
+          cd "$PACKAGED_OUTPUTPATH" || exit 1
+          shopt -s nullglob
+          files=( *.img.gz *.img.xz )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "❌ 未找到任何镜像文件"
+            exit 1
+          fi
+          for FILE in "${files[@]}"; do
             NEW_FILENAME=$(echo "$FILE" | sed "s/openwrt/istoreos_${{ env.VERSION }}/g")
             if [ "$FILE" != "$NEW_FILENAME" ]; then
-              mv "$FILE" "$NEW_FILENAME"
-              echo "✅ 重命名: $FILE → $NEW_FILENAME"
+              mv -v "$FILE" "$NEW_FILENAME"
             else
               echo "⏭️ 无需重命名: $FILE"
             fi
           done
-
+          echo "最终文件列表："
+          ls -lah
+      # --- 上传 Release（确保覆盖所有可能后缀） ---
       - name: 🚀 上传到 Release
         uses: softprops/action-gh-release@v2.2.1
         with:
@@ -197,6 +177,7 @@ jobs:
             
             👤 用户名：root / 🔒 密码：无
           files: |
-            ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz      # 使用环境变量
+            ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz
+            ${{ env.PACKAGED_OUTPUTPATH }}/*.img.xz
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
