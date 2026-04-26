@@ -74,6 +74,13 @@ jobs:
           curl -L -o bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz "$DOWNLOAD_URL"
           if [ $? -ne 0 ]; then echo "❌ 下载失败，检查 Tag 是否存在"; exit 1; fi
 
+          # 校验文件是否为 gzip 格式
+          if ! file bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz | grep -q 'gzip compressed data'; then
+            echo "❌ 错误：下载的文件不是有效的 gzip 格式！内容如下："
+            cat bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz | head -n 5
+            exit 1
+          fi
+
       - name: 🔍 查找文件路径
         id: find_rootfs
         run: |
