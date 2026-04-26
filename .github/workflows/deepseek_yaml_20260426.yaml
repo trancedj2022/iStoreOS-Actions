@@ -169,7 +169,7 @@ jobs:
 
       - name: 📜 重命名产出文件
         run: |
-          PACKAGES_DIR="$PACKAGED_OUTPUTPATH"   # 直接用环境变量
+          PACKAGES_DIR="${PACKAGED_OUTPUTPATH}"          # 直接使用环境变量
           echo "打包输出目录: $PACKAGES_DIR"
           [ -z "$PACKAGES_DIR" ] || [ ! -d "$PACKAGES_DIR" ] && { echo "❌ 目录无效"; exit 1; }
           cd "$PACKAGES_DIR"
@@ -195,12 +195,8 @@ jobs:
             🌐 **网络模式：** ${{ inputs.network_settings == 'static' && inputs.ipaddr || 'DHCP (多网口默认 192.168.100.1)' }}
             🧠 **内核来源：** ophub/kernel (stable)
             
-            👤 用户名：root  
-            🔒 密码：无
-            
-            ---
-            ⚡ **说明：** 此固件由 rootfs 直接打包，插件与官方 iStoreOS 一致，可后续在系统中安装/更新内核。
+            👤 用户名：root / 🔒 密码：无
           files: |
-           ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz    # 改为环境变量
+            ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz      # 使用环境变量
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
