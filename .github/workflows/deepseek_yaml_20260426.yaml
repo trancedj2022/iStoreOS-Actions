@@ -23,11 +23,11 @@ on:
       ipaddr:
         description: '3、管理 IP（选择 static 时必填）'
         required: true
-        default: '192.168.5.88'
+        default: '192.168.8.200'
       gateway:
         description: '4、默认网关（选择 static 时必填）'
         required: true
-        default: '192.168.5.1'
+        default: '192.168.8.1'
       openwrt_board:
         description: "5、目标设备型号"
         required: true
