@@ -1,4 +1,4 @@
-name: 💿 StX_Build-iStoreOS-src
+name: 💿 StX_Build-iStoreOS-using-src
 on:
   repository_dispatch:
   workflow_dispatch:
@@ -24,17 +24,22 @@ on:
           - beikeyun
           - boca-tcn100
           - boca-tcn200
+          - bt-100m
+          - bt-1000m
           - cd1000
           - chainedbox
           - cm3588-nas
           - crrc
           - dc-a588
           - dg3399
+          - dg-nas-lite
           - dg-tn3568
           - dlfr100
           - e20c
           - e25
           - eaidk-610
+          - easepi-a2
+          - easepi-r2
           - emb3531
           - fine3399
           - firefly-itx-3588j
@@ -56,6 +61,7 @@ on:
           - hs530r
           - ht2
           - hugsun-x99
+          - indiedroid-nova
           - ipc-r
           - jp-tvbox
           - king3399
@@ -65,11 +71,13 @@ on:
           - leez
           - lubancat-1
           - lubancat-2
+          - lubancat-4
           - lx-r3s
           - lyt-t68m
           - lz-d3568
           - lz-d3588
           - lz-k3568
+          - md1000
           - mrkaio-m68s
           - nanopc-t4
           - nanopc-t6
@@ -80,6 +88,8 @@ on:
           - nsy-g68-plus
           - orangepi-3b
           - orangepi-5-plus
+          - orangepi-5-pro
+          - orangepi-5-ultra
           - orangepi-5b
           - orangepi-zero3
           - painet-p3
@@ -89,7 +99,10 @@ on:
           - r68s
           - renegade-rk3328
           - rk3318-box
+          - roceos-k40pro
           - rock-5-itx
+          - rock-3b
+          - rock-3c
           - rock5b
           - rock5c
           - ruisen-box
@@ -181,6 +194,7 @@ on:
           - s922x-reva
           - s922x-ugoos-am6
           - seewo-sv21
+          - seewo-sv50
           - smart-am40
           - smart-am60
           - station-m1
@@ -225,7 +239,7 @@ on:
         type: boolean
 
 env:
-  VERSION: 24.10.6
+  VERSION: 24.10.7
 
 jobs:
   build:
