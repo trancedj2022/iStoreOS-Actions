@@ -288,20 +288,14 @@ jobs:
         run: |
           sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/uci-defaults/99-custom.sh"
           sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/banner"
-          echo "当前网络配置路径"
           CONFIG_PATH="./files/etc/uci-defaults/99-custom.sh"
-          echo $CONFIG_PATH
           if [ "${{ inputs.network_settings }}" = "static" ]; then
-             echo "删除网络设置-dhcp"
              sed -i '34,111d' "$CONFIG_PATH"
-             echo "替换默认配置"
              sed -i "/ipaddr/s/192.168.5.88/${{ inputs.ipaddr }}/g" "$CONFIG_PATH"
              sed -i "/gateway/s/192.168.5.1/${{ inputs.gateway }}/g" "$CONFIG_PATH"
           else
-             echo "删除网络设置-static"
              sed -i '26,32d' "$CONFIG_PATH"
           fi
-          echo "输出配置"
           cat $CONFIG_PATH
 
       - name: ⏬ 安装依赖
@@ -327,19 +321,15 @@ jobs:
           cp files/etc/rc.local imagebuilder/files/etc/
           
           cd imagebuilder
-          echo "启用rootfs.tar.gz配置并停用非必要配置"
           sed -i 's/# CONFIG_TARGET_ROOTFS_TARGZ is not set/CONFIG_TARGET_ROOTFS_TARGZ=y/' .config
           sed -i "s|CONFIG_TARGET_ROOTFS_SQUASHFS=.*|# CONFIG_TARGET_ROOTFS_SQUASHFS is not set|g" .config
           sed -i "s|CONFIG_TARGET_IMAGES_GZIP=.*|# CONFIG_TARGET_IMAGES_GZIP is not set|g" .config
-          echo "打印action目录结构"
           tree -L 1
 
       - name: 🧱 构建 iStoreOS-rootfs
         working-directory: ./imagebuilder
         run: |
-          echo "打印imagebuilder目录结构"
           tree -L 1
-          echo "打印repositories"
           cat repositories.conf
           bash ./build24.sh
 
@@ -354,8 +344,8 @@ jobs:
           echo "✅ Found rootfs: $ROOTFS"
           echo "rootfs_path=$ROOTFS" >> $GITHUB_OUTPUT
 
-      - name: 🧱 打包 iStoreOS 固件
-        uses: ophub/amlogic-s9xxx-openwrt@main
+      - name: 🧱 打包 iStoreOS 固件（使用稳定版 ophub Action）
+        uses: ophub/amlogic-s9xxx-openwrt@v2.1.0   # 固定版本，避免 main 分支临时缺陷
         with:
           openwrt_path: ${{ steps.rootfs.outputs.rootfs_path }}
           openwrt_board: ${{ inputs.openwrt_board }}
@@ -366,17 +356,12 @@ jobs:
           builder_name: kwonelee
 
       - name: 📜 调整 .img.gz 文件名
-        id: rename
         run: |
           for FILE in ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz; do
-            echo "Processing file: $FILE"
             FILENAME=$(basename "$FILE")
             NEW_FILENAME=$(echo "$FILENAME" | sed "s/openwrt/istoreos_${{ env.VERSION }}/g")
             if [ "$FILENAME" != "$NEW_FILENAME" ]; then
               mv "$FILE" "${{ env.PACKAGED_OUTPUTPATH }}/$NEW_FILENAME"
-              echo "Renamed $FILENAME to $NEW_FILENAME"
-            else
-              echo "No need to rename $FILENAME"
             fi
           done
 
