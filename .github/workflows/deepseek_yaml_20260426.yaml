@@ -47,7 +47,7 @@ on:
       auto_kernel:
         description: "自动使用最新内核（未匹配则自动）"
         required: false
-        default: true
+        default: false
         type: boolean
 
 env:
@@ -129,7 +129,7 @@ jobs:
           echo "file=$ROOTFS_FILE" >> $GITHUB_OUTPUT
       - name: 🧱 用 Amlogic 工具打包固件
         id: package
-        uses: ophub/amlogic-s9xxx-openwrt@main
+        uses: ophub/amlogic-s9xxx-openwrt@v6.0.0
         with:
           openwrt_path: ${{ steps.find_rootfs.outputs.file }}
           openwrt_board: ${{ inputs.openwrt_board }}
