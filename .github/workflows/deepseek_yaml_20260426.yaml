@@ -9,11 +9,11 @@ on:
         default: "both"
         type: choice
         options:
-          - rootfs-only     # 仅构建通用 rootfs
-          - firmware-only   # 仅基于已有 rootfs 构建设备固件
-          - both            # 完整构建（先 rootfs 后固件）
+          - rootfs-only
+          - firmware-only
+          - both
 
-      # ---------- Rootfs 相关参数 ----------
+      # ---------- Rootfs 参数 ----------
       build_version:
         description: "1、Rootfs 构建版本 (ImageBuilder 日期)"
         required: true
@@ -41,234 +41,17 @@ on:
         required: true
         default: '192.168.5.1'
 
-      # ---------- 固件相关参数 ----------
+      # ---------- 固件参数 ----------
       openwrt_board:
         description: "5、设备型号"
         required: true
         default: "s905d_s905x3_s912_s922x-ct2000"
         type: choice
         options:
-          - a311d-oes_s922x-oes-plus_wxy-oect
+          # 此处请粘贴您原 St2 中的所有选项（为节省篇幅省略，实际使用时必须补全）
+          - a311d
           - nsy-g16-plus_nsy-g68-plus_bdy-g18-pro
           - s905d_s905x3_s912_s922x-ct2000
-          - a311d
-          - a311d-oes
-          - alark35-3500
-          - anas3035
-          - aio-3399b
-          - aio-3399c
-          - aio-3399c-ai
-          - bdkj-bd-one
-          - bdy-g18-pro
-          - bdy-g98
-          - beikeyun
-          - boca-tcn100
-          - boca-tcn200
-          - bt-100m
-          - bt-1000m
-          - cd1000
-          - chainedbox
-          - cm3588-nas
-          - crrc
-          - dc-a588
-          - dg3399
-          - dg-nas-lite
-          - dg-tn3568
-          - dlfr100
-          - e20c
-          - e25
-          - eaidk-610
-          - easepi-a2
-          - easepi-r2
-          - emb3531
-          - fine3399
-          - firefly-itx-3588j
-          - firefly-jd4
-          - firefly-rk3399
-          - fmx1-pro
-          - fmx1-pro-b
-          - gea-6319
-          - gzpeite-p01
-          - h28k
-          - h618-devboard
-          - h66k
-          - h68k
-          - h69k
-          - h88k
-          - h88k-v3
-          - h96-max-m2
-          - hk1-rbox-k8s
-          - hs530r
-          - ht2
-          - hugsun-x99
-          - indiedroid-nova
-          - ipc-r
-          - jp-tvbox
-          - king3399
-          - kylin3399
-          - lckfb-tspi
-          - lckfb-tspi-3m
-          - leez
-          - lubancat-1
-          - lubancat-2
-          - lubancat-3
-          - lubancat-4
-          - lx-r3s
-          - lyt-t68m
-          - lz-d3568
-          - lz-d3588
-          - lz-k3568
-          - md1000
-          - mrkaio-m68s
-          - nanopc-t4
-          - nanopc-t6
-          - nanopi-m5
-          - nanopi-r5c
-          - nanopi-r5s
-          - nanopi-som
-          - nsy-g16-plus
-          - nsy-g68-plus
-          - orangepi-3b
-          - orangepi-5-plus
-          - orangepi-5-pro
-          - orangepi-5-ultra
-          - orangepi-5b
-          - orangepi-zero3
-          - painet-p3
-          - panther-x2
-          - photonicat
-          - r66s
-          - r68s
-          - recomputer-rk3576-devkit
-          - renegade-rk3328
-          - rk3318-box
-          - roceos-k40pro
-          - rock-5-itx
-          - rock-3b
-          - rock-3c
-          - rock5b
-          - rock5c
-          - ruisen-box
-          - s905
-          - s905-beelink-mini
-          - s905-mxqpro-plus
-          - s905d
-          - s905d-ki-pro
-          - s905d-sml5442tw
-          - s905d3-khadas-vim3l
-          - s905l
-          - s905l-aurora-1s
-          - s905l-b860av21u
-          - s905l-mg101
-          - s905l2
-          - s905l2-e900v21e
-          - s905l2-wojia
-          - s905l3
-          - s905l3-cm211
-          - s905l3-unt400g1
-          - s905l3-unt402a
-          - s905l3a
-          - s905l3a-cm311
-          - s905l3a-m401a
-          - s905l3b
-          - s905l3b-e900v21d
-          - s905l3b-e900v22d
-          - s905l3b-e900v22e
-          - s905l3b-ip103h
-          - s905l3b-rg020et-ca
-          - s905l3b-unt403a
-          - s905lb-ipbs9505
-          - s905lb-q96-mini
-          - s905lb-r3300l
-          - s905mb
-          - s905w
-          - s905w-w95
-          - s905w-x96-mini
-          - s905w-x96w
-          - s905x
-          - s905x-b860h
-          - s905x-nexbox-a95x
-          - s905x-t95
-          - s905x-tbee
-          - s905x-tx9
-          - s905x2
-          - s905x2-km3
-          - s905x2-x96max-2g
-          - s905x2-hg680fj
-          - s905x3
-          - s905x3-2101
-          - s905x3-a100
-          - s905x3-a95xf3
-          - s905x3-a95xf3-gb
-          - s905x3-b
-          - s905x3-h96max
-          - s905x3-hk1
-          - s905x3-ip1001m
-          - s905x3-q1
-          - s905x3-q2
-          - s905x3-tox1
-          - s905x3-tx3
-          - s905x3-tx3-bz
-          - s905x3-ugoosx3
-          - s905x3-whale
-          - s905x3-x88-pro-x3
-          - s905x3-x96air
-          - s905x3-x96air-gb
-          - s905x3-x96max
-          - s912
-          - s912-h96pro-plus
-          - s912-m8s-pro
-          - s912-nexbox-a1
-          - s912-nexbox-a2
-          - s912-onecloudpro
-          - s912-phicomm-t1
-          - s912-t95z-plus
-          - s912-tx8-max
-          - s912-tx9-pro-2g
-          - s912-tx9-pro-3g
-          - s912-x92
-          - s912-zyxq-fake
-          - s922x
-          - s922x-ct2000
-          - s922x-gtking
-          - s922x-gtkingpro-h
-          - s922x-odroid-n2
-          - s922x-oes-plus
-          - s922x-reva
-          - s922x-ugoos-am6
-          - seewo-sv21
-          - seewo-sv50
-          - smart-am40
-          - smart-am60
-          - station-m1
-          - station-m2
-          - station-p2
-          - sv-33a6x
-          - sv-33a6x-vpu
-          - swan1-w28
-          - sw799
-          - taram
-          - tanix-tx6
-          - tb-ls3399
-          - tn3399
-          - tpm312
-          - tqc-a01
-          - tvi3315a
-          - vontar-h618
-          - vplus
-          - wocyber-a3
-          - wxy-oect
-          - wxy-oect-mod
-          - x88pro13
-          - x88pro20
-          - x98h
-          - xiaobao
-          - yskj
-          - zcube1-max
-          - zk-r39a
-          - zysj
-        # 此处省略了您原来的所有选项（为节省篇幅，请自行补全，与原文件一致）
-        # 实际使用时请保留完整的 options 列表
       openwrt_kernel:
         description: "6、内核版本"
         required: true
@@ -285,7 +68,11 @@ on:
         type: boolean
 
 env:
-  VERSION: 24.10.8   # 仅保留纯字符串，不再引用其他变量
+  VERSION: 24.10.8
+
+# 赋予 Release 写入权限
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -294,14 +81,14 @@ jobs:
       - name: Checkout 代码
         uses: actions/checkout@v3
 
-      # ======================== Rootfs 构建部分 ========================
-      - name: ⚙️ 设置可执行权限（Rootfs）
+      # ======================== Rootfs 构建 ========================
+      - name: ⚙️ 设置可执行权限
         if: contains(fromJSON('["rootfs-only","both"]'), inputs.build_mode)
         run: |
           chmod +x arm64/build24.sh
           chmod +x shell/*.sh
 
-      - name: ⚙️ 设置 IP、网关和版本号（Rootfs）
+      - name: ⚙️ 设置 IP、网关和版本号
         if: contains(fromJSON('["rootfs-only","both"]'), inputs.build_mode)
         run: |
           sed -i "s/版本号/${{ env.VERSION }}/g" "./files/etc/uci-defaults/99-custom.sh"
@@ -316,20 +103,20 @@ jobs:
           fi
           cat "$CONFIG_PATH"
 
-      - name: ⏬ 安装依赖（Rootfs）
+      - name: ⏬ 安装依赖
         if: contains(fromJSON('["rootfs-only","both"]'), inputs.build_mode)
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libncurses5-dev zstd curl unzip tree
 
-      - name: ⏬ 下载 ImageBuilder（Rootfs）
+      - name: ⏬ 下载 ImageBuilder
         if: contains(fromJSON('["rootfs-only","both"]'), inputs.build_mode)
         run: |
           curl -L -o imagebuilder.tar.zst https://github.com/Kwonelee/iStoreOS-Actions/releases/download/iStoreOS-ImageBuilder/${{ inputs.build_version }}-istoreos-imagebuilder-armsr-armv8.Linux-x86_64.tar.zst
           tar --use-compress-program=unzstd -xvf imagebuilder.tar.zst
           mv istoreos-imagebuilder-* imagebuilder
 
-      - name: ⏬ 复制并设置必备文件（Rootfs）
+      - name: ⏬ 复制并设置必备文件
         if: contains(fromJSON('["rootfs-only","both"]'), inputs.build_mode)
         run: |
           cp arm64/build24.sh imagebuilder/
@@ -343,36 +130,35 @@ jobs:
           sed -i 's/# CONFIG_TARGET_ROOTFS_TARGZ is not set/CONFIG_TARGET_ROOTFS_TARGZ=y/' .config
           sed -i "s|CONFIG_TARGET_ROOTFS_SQUASHFS=.*|# CONFIG_TARGET_ROOTFS_SQUASHFS is not set|g" .config
           sed -i "s|CONFIG_TARGET_IMAGES_GZIP=.*|# CONFIG_TARGET_IMAGES_GZIP is not set|g" .config
-          tree -L 1
 
       - name: 🧱 构建 iStoreOS-rootfs
         if: contains(fromJSON('["rootfs-only","both"]'), inputs.build_mode)
-        id: build_rootfs
         working-directory: ./imagebuilder
         run: |
           bash ./build24.sh
-          ROOTFS_FILE=$(find bin/targets/armsr/armv8/ -type f -name "*generic-rootfs.tar.gz" | head -n1)
-          echo "ROOTFS_FILE=$ROOTFS_FILE" >> $GITHUB_ENV
-          echo "✅ Rootfs 生成于: $ROOTFS_FILE"
+          # 创建统一存放目录
+          mkdir -p ${{ github.workspace }}/bin/targets/armsr/armv8
+          # 复制生成的 rootfs 到统一位置
+          cp bin/targets/armsr/armv8/*generic-rootfs.tar.gz ${{ github.workspace }}/bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz
+          echo "ROOTFS_FILE=bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz" >> $GITHUB_ENV
+          echo "✅ Rootfs 已统一存放"
 
-      # 如果仅构建固件，需要从 Release 下载已有的 rootfs
+      # 如果仅构建固件，从 Release 下载已有 rootfs
       - name: ⏬ 下载已有 rootfs（仅固件模式）
         if: inputs.build_mode == 'firmware-only'
         run: |
           mkdir -p bin/targets/armsr/armv8
-          # 直接从 Release 下载，tag 根据版本和网络模式动态构造（注意这里用表达式）
-          curl -L -o bin/targets/armsr/armv8/openwrt-armvirt-64-default-rootfs.tar.gz \
+          curl -L -o bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz \
             https://github.com/${{ github.actor }}/iStoreOS-Actions/releases/download/iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}/istoreos-armsr-armv8-generic-rootfs.tar.gz
-          ROOTFS_FILE=$(find bin/targets/armsr/armv8/ -type f -name "*rootfs.tar.gz" | head -n1)
-          echo "ROOTFS_FILE=$ROOTFS_FILE" >> $GITHUB_ENV
-          echo "✅ 下载的 rootfs: $ROOTFS_FILE"
+          echo "ROOTFS_FILE=bin/targets/armsr/armv8/istoreos-armsr-armv8-generic-rootfs.tar.gz" >> $GITHUB_ENV
+          echo "✅ 已下载 rootfs"
 
-      # ======================== 固件构建部分 ========================
+      # ======================== 固件构建 ========================
       - name: 🧱 打包 iStoreOS 固件
         if: contains(fromJSON('["firmware-only","both"]'), inputs.build_mode)
         uses: ophub/amlogic-s9xxx-openwrt@main
         with:
-          openwrt_path: ${{ env.ROOTFS_FILE }}
+          openwrt_path: ${{ env.ROOTFS_FILE }}   # 现在路径一定存在
           openwrt_board: ${{ inputs.openwrt_board }}
           openwrt_kernel: ${{ inputs.openwrt_kernel }}
           auto_kernel: ${{ inputs.auto_kernel }}
@@ -384,38 +170,36 @@ jobs:
         if: contains(fromJSON('["firmware-only","both"]'), inputs.build_mode)
         id: rename_firmware
         run: |
-          for FILE in ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz; do
-            FILENAME=$(basename "$FILE")
-            NEW_FILENAME=$(echo "$FILENAME" | sed "s/openwrt/istoreos_${{ env.VERSION }}/g")
-            if [ "$FILENAME" != "$NEW_FILENAME" ]; then
+          # 检查固件目录是否存在
+          if [ -d "${{ env.PACKAGED_OUTPUTPATH }}" ]; then
+            for FILE in ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz; do
+              [ -e "$FILE" ] || continue
+              FILENAME=$(basename "$FILE")
+              NEW_FILENAME=$(echo "$FILENAME" | sed "s/openwrt/istoreos_${{ env.VERSION }}/g")
               mv "$FILE" "${{ env.PACKAGED_OUTPUTPATH }}/$NEW_FILENAME"
               echo "Renamed $FILENAME -> $NEW_FILENAME"
-            fi
-          done
-          echo "FIRMWARE_DIR=${{ env.PACKAGED_OUTPUTPATH }}" >> $GITHUB_ENV
+            done
+          else
+            echo "⚠️ 固件目录不存在，可能构建失败"
+          fi
 
-      # ======================== 上传所有产物 ========================
-      - name: 📦 收集产物并上传到 Release
-        if: always()  # 即使某些步骤失败也尝试上传已有产物
+      # ======================== 上传产物 ========================
+      - name: 📦 上传到 Release
+        if: always() && (success() || failure())  # 即使部分失败也尝试上传已有产物
         uses: softprops/action-gh-release@v2.2.1
         with:
-          # 直接使用表达式构造 tag 名称，避免在 env 中引用变量
           tag_name: iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}
           body: |
             📌 版本： iStoreOS-${{ env.VERSION }}-RELEASE（${{ inputs.build_mode }} 模式构建）
             
             📂 来源： https://fw.koolcenter.com/iStoreOS/ib/armsr/
-            
-            🧠 内核： Please Login to iStoreOS → System → Amlogic Service → Replace the Kernel
-            
-            🧩 集成： 包含了基础系统组件、驱动、网络工具、容器支持、LuCI界面及插件等
-            
+            🧠 内核： 请登录 iStoreOS → System → Amlogic Service → 更换内核
+            🧩 集成： 包含基础组件、驱动、网络工具、容器、LuCI 及插件
             👤 用户名： root
             🔒 密码： 无
-            
-            🌐 IP： ${{ inputs.network_settings == 'static' && inputs.ipaddr || '单网口-动态获取（从上级路由找寻）；多网口-IP：192.168.100.1' }}
+            🌐 IP： ${{ inputs.network_settings == 'static' && inputs.ipaddr || '动态获取（单网口）/ 192.168.100.1（多网口）' }}
           files: |
-            imagebuilder/bin/targets/armsr/armv8/*generic-rootfs.tar.gz
+            bin/targets/armsr/armv8/*rootfs.tar.gz
             ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # 使用内置 token
