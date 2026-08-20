@@ -345,7 +345,7 @@ jobs:
           echo "rootfs_path=$ROOTFS" >> $GITHUB_OUTPUT
 
       - name: 🧱 打包 iStoreOS 固件（使用稳定版 ophub Action）
-        uses: ophub/amlogic-s9xxx-openwrt@v2.1.0   # 固定版本，避免 main 分支临时缺陷
+        uses: uses: ophub/amlogic-s9xxx-openwrt@v2.0.1   # 固定版本，避免 main 分支临时缺陷
         with:
           openwrt_path: ${{ steps.rootfs.outputs.rootfs_path }}
           openwrt_board: ${{ inputs.openwrt_board }}
