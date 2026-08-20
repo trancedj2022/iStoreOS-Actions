@@ -90,40 +90,50 @@ jobs:
           mkdir -p openwrt/out
 
       - name: 🧱 手动打包固件
-        id: manual_package
-        working-directory: /tmp/ophub
-        run: |
-          # 复制 rootfs 到预期位置
-          mkdir -p openwrt-armsr
-          cp -v "$GITHUB_WORKSPACE/${{ steps.find_rootfs.outputs.file }}" openwrt-armsr/istoreos-armsr-armv8-generic-rootfs.tar.gz
+       id: manual_package
+  working-directory: /tmp/ophub
+  run: |
+    # ===== 彻底修复所有 cp --update= 错误 =====
+    echo "🔧 正在修复所有脚本中的 cp --update= ..."
+    find . -type f \( -name "*.sh" -o -name "remake" -o -name "*.inc" \) -exec sed -i 's/cp --update=/cp -u /g' {} \;
+    # 额外检查并替换可能的变体
+    find . -type f -exec sed -i 's/cp --update /cp -u /g' {} \;
+    # 验证是否还有残留
+    if grep -r "cp --update" .; then
+      echo "⚠️ 仍有残留的 cp --update，请检查下列文件"
+      exit 1
+    else
+      echo "✅ 所有脚本已修复，未发现 cp --update"
+    fi
 
-          # 组装参数
-          BOARD="${{ inputs.openwrt_board }}"
-          KERNEL="${{ inputs.openwrt_kernel }}"
-          AUTO_KERNEL="${{ inputs.auto_kernel }}"
-          KERNEL_REPO="ophub/kernel"
-          KERNEL_USAGE="stable"
-          BUILDER_NAME="kwonelee"
-          IPADDR="192.168.1.1"   # 默认IP，可根据需要调整
+    # ===== 复制 rootfs 到预期位置 =====
+    mkdir -p openwrt-armsr
+    cp -v "$GITHUB_WORKSPACE/${{ steps.find_rootfs.outputs.file }}" openwrt-armsr/istoreos-armsr-armv8-generic-rootfs.tar.gz
 
-          CMD="sudo ./remake"
-          CMD+=" -b ${BOARD}"
-          CMD+=" -r ${KERNEL_REPO}"
-          CMD+=" -u ${KERNEL_USAGE}"
-          [ -n "${KERNEL}" ] && CMD+=" -k ${KERNEL}"
-          [ "${AUTO_KERNEL}" = "true" ] && CMD+=" -a true" || CMD+=" -a false"
-          CMD+=" -p ${IPADDR}"
-          [ -n "${BUILDER_NAME}" ] && CMD+=" -n ${BUILDER_NAME}"
+    # ===== 组装参数 =====
+    BOARD="${{ inputs.openwrt_board }}"
+    KERNEL="${{ inputs.openwrt_kernel }}"
+    AUTO_KERNEL="${{ inputs.auto_kernel }}"
+    KERNEL_REPO="ophub/kernel"
+    KERNEL_USAGE="stable"
+    BUILDER_NAME="kwonelee"
+    IPADDR="192.168.1.1"
 
-          echo "执行命令: $CMD"
-          eval $CMD
+    CMD="sudo ./remake"
+    CMD+=" -b ${BOARD}"
+    CMD+=" -r ${KERNEL_REPO}"
+    CMD+=" -u ${KERNEL_USAGE}"
+    [ -n "${KERNEL}" ] && CMD+=" -k ${KERNEL}"
+    [ "${AUTO_KERNEL}" = "true" ] && CMD+=" -a true" || CMD+=" -a false"
+    CMD+=" -p ${IPADDR}"
+    [ -n "${BUILDER_NAME}" ] && CMD+=" -n ${BUILDER_NAME}"
 
-          echo "执行命令: $CMD"
-          eval $CMD
+    echo "执行命令: $CMD"
+    eval $CMD
 
-          # 将输出复制到工作区根目录，以便后续步骤使用
-          mkdir -p /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out
-          cp -v openwrt/out/*.img* /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out/ || true
+    # ===== 复制输出文件 =====
+    mkdir -p /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out
+    cp -v openwrt/out/*.img* /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out/ || true
 
       - name: 🔓 修复输出目录权限
         run: |
