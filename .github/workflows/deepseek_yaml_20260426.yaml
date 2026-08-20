@@ -116,67 +116,105 @@ jobs:
     needs: build-rootfs
     runs-on: ubuntu-22.04
     steps:
-      - name: ⏬ 下载 rootfs 工件
-        uses: actions/download-artifact@v4
-        with:
-          name: rootfs-${{ inputs.network_settings }}
-          path: bin/targets/armsr/armv8
-      - name: 🔍 定位 rootfs 文件
-        id: find_rootfs
-        run: |
-          ROOTFS_FILE=$(find bin/targets/armsr/armv8/ -type f -name "*rootfs.tar.gz" | head -n1)
-          [ ! -f "$ROOTFS_FILE" ] && { echo "❌ 找不到 rootfs.tar.gz"; exit 1; }
-          echo "file=$ROOTFS_FILE" >> $GITHUB_OUTPUT
-      - name: 🧱 打包iStoreOS固件
-        uses: ophub/amlogic-s9xxx-openwrt@OpenWrt_openwrt_main_save_2026.08
-        with:
-          openwrt_path: ${{ steps.find_rootfs.outputs.file }}
-          openwrt_board: ${{ inputs.openwrt_board }}
-          openwrt_kernel: ${{ inputs.openwrt_kernel }}
-          auto_kernel: ${{ inputs.auto_kernel }}
-          kernel_repo: ophub/kernel
-          kernel_usage: stable
-          builder_name: kwonelee
-      # --- 关键修正：修复文件权限（避免 root 属主导致后续 mv 失败） ---
-      - name: 🔓 修复输出目录权限
-        run: |
-          sudo chown -R runner:docker "$PACKAGED_OUTPUTPATH"
-          sudo chmod -R 755 "$PACKAGED_OUTPUTPATH"
-      # --- 重命名（兼容 .img.gz / .img.xz） ---
-      - name: 📜 重命名产出文件
-        run: |
-          cd "$PACKAGED_OUTPUTPATH" || exit 1
-          shopt -s nullglob
-          files=( *.img.gz *.img.xz )
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "❌ 未找到任何镜像文件"
-            exit 1
+    - name: ⏬ 下载 rootfs 工件
+      uses: actions/download-artifact@v4
+      with:
+        name: rootfs-${{ inputs.network_settings }}
+        path: bin/targets/armsr/armv8
+
+    - name: 🔍 定位 rootfs 文件
+      id: find_rootfs
+      run: |
+        ROOTFS_FILE=$(find bin/targets/armsr/armv8/ -type f -name "*rootfs.tar.gz" | head -n1)
+        [ ! -f "$ROOTFS_FILE" ] && { echo "❌ 找不到 rootfs.tar.gz"; exit 1; }
+        echo "file=$ROOTFS_FILE" >> $GITHUB_OUTPUT
+        echo "rootfs_dir=$(dirname $ROOTFS_FILE)" >> $GITHUB_OUTPUT
+
+    # ---- 手动使用 ophub 打包工具（修补版） ----
+    - name: 🧰 克隆并修补 ophub 打包脚本
+      run: |
+        git clone https://github.com/ophub/amlogic-s9xxx-openwrt.git /tmp/ophub
+        cd /tmp/ophub
+        # 修复所有 cp --update= 语法错误
+        find . -type f -name "*.sh" -exec sed -i 's/cp --update=/cp -u /g' {} \;
+        # 给脚本可执行权限
+        chmod +x remake
+        # 创建输出目录
+        mkdir -p openwrt/out
+
+    - name: 🧱 手动执行打包
+      id: manual_package
+      working-directory: /tmp/ophub
+      run: |
+        # 复制 rootfs 到脚本预期的目录
+        mkdir -p openwrt-armsr
+        cp -v "${{ steps.find_rootfs.outputs.file }}" openwrt-armsr/istoreos-armsr-armv8-generic-rootfs.tar.gz
+
+        # 组装 remake 参数
+        BOARD="${{ inputs.openwrt_board }}"
+        KERNEL="${{ inputs.openwrt_kernel }}"
+        AUTO_KERNEL="${{ inputs.auto_kernel }}"
+        KERNEL_REPO="ophub/kernel"
+        KERNEL_USAGE="stable"
+        BUILDER_NAME="kwonelee"
+        IPADDR="192.168.1.1"   # 默认 IP，可调整
+
+        # 构建命令行
+        CMD="sudo ./remake"
+        CMD+=" -b ${BOARD}"
+        CMD+=" -r ${KERNEL_REPO}"
+        CMD+=" -u ${KERNEL_USAGE}"
+        [ -n "${KERNEL}" ] && CMD+=" -k ${KERNEL}"
+        [ "${AUTO_KERNEL}" = "true" ] && CMD+=" -a true" || CMD+=" -a false"
+        CMD+=" -p ${IPADDR}"
+        [ -n "${BUILDER_NAME}" ] && CMD+=" -n ${BUILDER_NAME}"
+
+        echo "执行命令: $CMD"
+        eval $CMD
+
+        # 将输出文件复制到标准位置，以便后续步骤使用
+        mkdir -p /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out
+        cp -v openwrt/out/*.img* /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out/ || true
+
+    - name: 🔓 修复输出目录权限
+      run: |
+        sudo chown -R runner:docker /tmp/ophub/openwrt/out
+        sudo chmod -R 755 /tmp/ophub/openwrt/out
+
+    - name: 📜 重命名产出文件
+      run: |
+        cd /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out || exit 1
+        shopt -s nullglob
+        files=( *.img.gz *.img.xz )
+        if [ ${#files[@]} -eq 0 ]; then
+          echo "❌ 未找到任何镜像文件"
+          exit 1
+        fi
+        for FILE in "${files[@]}"; do
+          NEW_FILENAME=$(echo "$FILE" | sed "s/openwrt/istoreos_${{ env.VERSION }}/g")
+          if [ "$FILE" != "$NEW_FILENAME" ]; then
+            mv -v "$FILE" "$NEW_FILENAME"
+          else
+            echo "⏭️ 无需重命名: $FILE"
           fi
-          for FILE in "${files[@]}"; do
-            NEW_FILENAME=$(echo "$FILE" | sed "s/openwrt/istoreos_${{ env.VERSION }}/g")
-            if [ "$FILE" != "$NEW_FILENAME" ]; then
-              mv -v "$FILE" "$NEW_FILENAME"
-            else
-              echo "⏭️ 无需重命名: $FILE"
-            fi
-          done
-          echo "最终文件列表："
-          ls -lah
-      # --- 上传 Release（确保覆盖所有可能后缀） ---
-      - name: 🚀 上传到 Release
-        uses: softprops/action-gh-release@v2.2.1
-        with:
-          tag_name: iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}-${{ inputs.openwrt_board }}
-          body: |
-            📌 **iStoreOS ${{ env.VERSION }} 完整固件**
-            
-            🔧 **设备型号：** ${{ inputs.openwrt_board }}
-            🌐 **网络模式：** ${{ inputs.network_settings == 'static' && inputs.ipaddr || 'DHCP (多网口默认 192.168.100.1)' }}
-            🧠 **内核来源：** ophub/kernel (stable)
-            
-            👤 用户名：root / 🔒 密码：无
-          files: |
-            ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz
-            ${{ env.PACKAGED_OUTPUTPATH }}/*.img.xz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        done
+        echo "最终文件列表："
+        ls -lah
+
+    - name: 🚀 上传到 Release
+      uses: softprops/action-gh-release@v2.2.1
+      with:
+        tag_name: iStoreOS-${{ env.VERSION }}-${{ inputs.network_settings }}-${{ inputs.openwrt_board }}
+        body: |
+          📌 **iStoreOS ${{ env.VERSION }} 完整固件**
+          
+          🔧 **设备型号：** ${{ inputs.openwrt_board }}
+          🌐 **网络模式：** ${{ inputs.network_settings == 'static' && inputs.ipaddr || 'DHCP (多网口默认 192.168.100.1)' }}
+          🧠 **内核来源：** ophub/kernel (stable)
+          
+          👤 用户名：root / 🔒 密码：无
+        files: |
+          /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out/*.img.gz
+          /home/runner/work/iStoreOS-Actions/iStoreOS-Actions/firmware-out/*.img.xz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
