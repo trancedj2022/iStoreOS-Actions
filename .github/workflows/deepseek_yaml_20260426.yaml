@@ -94,7 +94,8 @@ jobs:
         working-directory: /tmp/ophub
         run: |
           # 复制 rootfs 到预期位置
-          cp -v "${{ steps.find_rootfs.outputs.file }}" openwrt-armsr/istoreos-armsr-armv8-generic-rootfs.tar.gz
+          mkdir -p openwrt-armsr
+          cp -v "$GITHUB_WORKSPACE/${{ steps.find_rootfs.outputs.file }}" openwrt-armsr/istoreos-armsr-armv8-generic-rootfs.tar.gz
 
           # 组装参数
           BOARD="${{ inputs.openwrt_board }}"
@@ -113,6 +114,9 @@ jobs:
           [ "${AUTO_KERNEL}" = "true" ] && CMD+=" -a true" || CMD+=" -a false"
           CMD+=" -p ${IPADDR}"
           [ -n "${BUILDER_NAME}" ] && CMD+=" -n ${BUILDER_NAME}"
+
+          echo "执行命令: $CMD"
+          eval $CMD
 
           echo "执行命令: $CMD"
           eval $CMD
