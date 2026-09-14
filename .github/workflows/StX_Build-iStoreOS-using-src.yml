@@ -255,10 +255,12 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: ⏬ 下载 rootfs.tar.gz
         run: |
@@ -305,7 +307,7 @@ jobs:
           done
 
       - name: 🚀 上传到 Release
-        uses: softprops/action-gh-release@v2.2.1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: iStoreOS-${{ env.VERSION }}-SNAPSHOT-dhcp
           body: |

@@ -231,7 +231,7 @@ on:
       openwrt_kernel:
         description: "2、请选择内核版本"
         required: true
-        default: "6.6.y"
+        default: "6.12.y"
         type: choice
         options:
           - 6.6.y
@@ -259,14 +259,16 @@ on:
           - dhcp
 
 env:
-  VERSION: 24.10.8
+  VERSION: 25.12.5
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: ⏬ 下载 rootfs.tar.gz
         run: |
@@ -310,7 +312,7 @@ jobs:
             fi
           done
       - name: 🚀 上传到 Release
-        uses: softprops/action-gh-release@v2.2.1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: iStoreOS-${{ env.VERSION }}-${{ inputs.openwrt_rootfs }}-${{ inputs.network_settings }}
           files: |
